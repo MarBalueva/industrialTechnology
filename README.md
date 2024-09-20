@@ -5,4 +5,4 @@
 ## Практика 2. 
 ### 2.1. Диаграмма use-case  
 
-![варианты использования](https://github.com/user-attachments/assets/78fca2ed-def3-45b1-996f-38171ed8aad8)  
+![варианты использования_2](https://github.com/user-attachments/assets/10d701c9-1205-413e-9877-cd1388cc8c5f)  
