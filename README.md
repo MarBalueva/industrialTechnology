@@ -5,4 +5,4 @@
 ## Практика 3. 
 ### 3.1. Диаграмма классов для Библиотеки  
 
-![image](https://github.com/user-attachments/assets/780f6e34-86e5-4887-95f4-a5721021901e)  
+![диаграмма классов](https://github.com/user-attachments/assets/b5d69388-5304-4430-8ec0-8d57292efa5d)
