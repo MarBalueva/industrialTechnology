@@ -345,5 +345,6 @@ func task15() {
 func main() {
 	// task1()
 	//T15()
-	Task_15()
+	//Task_15()
+	Task10()
 }
