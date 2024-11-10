@@ -4,6 +4,7 @@
 
 ## Практика 8  
 ## Создание простого REST API на языке Go с использованием фреймворка Gin.  
+Ссылка на код: https://github.com/MarBalueva/industrialTechnology/blob/pr8/main.go  
 
 ### 8.1. Получение всех продуктов  
 GET http://localhost:8080/products  
