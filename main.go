@@ -2,7 +2,9 @@ package main
 
 import (
 	"net/http"
+	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,36 +27,174 @@ var products = []Product{
 	{ID: "3", CategoryId: 3, Name: "Макарон Вишня", Description: "Невесомые пирожные из тончайшей миндальной муки и с божественным вкусом вишни.", Cost: 79.0},
 }
 
+var jwtKey = []byte("my_secret_key")
+
+type Credentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type Claims struct {
+	Username string `json:"username"`
+	jwt.StandardClaims
+}
+
+type User struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+var users = []User{
+	{Username: "user", Password: "password"},
+	{Username: "user1", Password: "password1"},
+	{Username: "user2", Password: "password2"},
+	{Username: "user3", Password: "password3"},
+}
+
 var cart = []CartItem{}
 
 var router = gin.Default()
 
 func main() {
-	// Получение всех продуктов
-	router.GET("/products", getProducts)
+	// Логин
+	router.POST("/login", login)
 
-	// Получение продукта по ID
-	router.GET("/products/:id", getProductByID)
+	// Рефреш токена
+	router.POST("/refresh", refreshToken)
 
-	// Создание нового продукта
-	router.POST("/products", createProduct)
+	protected := router.Group("/")
+	protected.Use(authMiddleware())
+	{
+		// Получение всех продуктов
+		protected.GET("/products", getProducts)
 
-	// Обновление существующего продукта
-	router.PUT("/products/:id", updateProduct)
+		// Получение продукта по ID
+		protected.GET("/products/:id", getProductByID)
 
-	// Удаление продукта
-	router.DELETE("/products/:id", deleteProduct)
+		// Создание нового продукта
+		protected.POST("/products", createProduct)
 
-	// Получение всех продуктов в корзине
-	router.GET("/cart", getCart)
+		// Обновление существующего продукта
+		protected.PUT("/products/:id", updateProduct)
 
-	// Добавление продукта в корзину
-	router.POST("/cart", addToCart)
+		// Удаление продукта
+		protected.DELETE("/products/:id", deleteProduct)
 
-	// Удаление продукта из корзины
-	router.DELETE("/cart/:productId", deleteFromCart)
+		// Получение всех продуктов в корзине
+		protected.GET("/cart", getCart)
+
+		// Добавление продукта в корзину
+		protected.POST("/cart", addToCart)
+
+		// Удаление продукта из корзины
+		protected.DELETE("/cart/:productId", deleteFromCart)
+	}
 
 	router.Run(":8080")
+}
+
+func generateToken(username string) (string, error) {
+	expirationTime := time.Now().Add(1 * time.Minute)
+	claims := &Claims{
+		Username: username,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expirationTime.Unix(),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtKey)
+}
+
+func login(c *gin.Context) {
+	var creds Credentials
+	if err := c.BindJSON(&creds); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid request"})
+		return
+	}
+
+	var validUser *User
+	for _, user := range users {
+		if user.Username == creds.Username && user.Password == creds.Password {
+			validUser = &user
+			break
+		}
+	}
+
+	if validUser == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
+		return
+	}
+
+	token, err := generateToken(creds.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "could not create token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"token": token})
+}
+
+func authMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenString := c.GetHeader("Authorization")
+
+		claims := &Claims{}
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+			return jwtKey, nil
+		})
+
+		if err != nil {
+			if ve, ok := err.(*jwt.ValidationError); ok {
+				if ve.Errors&jwt.ValidationErrorExpired != 0 {
+					c.JSON(http.StatusUnauthorized, gin.H{"message": "token expired"})
+					c.Abort()
+					return
+				}
+			}
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
+			c.Abort()
+			return
+		}
+
+		if !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+
+func refreshToken(c *gin.Context) {
+	tokenString := c.GetHeader("Authorization")
+
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+
+	if err != nil {
+		if ve, ok := err.(*jwt.ValidationError); ok {
+			if ve.Errors&jwt.ValidationErrorExpired != 0 {
+				newToken, err := generateToken(claims.Username)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"message": "could not refresh token"})
+					return
+				}
+				c.JSON(http.StatusOK, gin.H{"token": newToken})
+				return
+			}
+		}
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
+		return
+	}
+
+	if !token.Valid {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
+		return
+	}
+	c.JSON(http.StatusBadRequest, gin.H{"message": "token is still valid"})
 }
 
 func getProducts(c *gin.Context) {
