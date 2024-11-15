@@ -4,7 +4,7 @@
 
 ## Практика 9
 ## Аутентификация и авторизация в REST API.  
-Ссылка на код: https://github.com/MarBalueva/industrialTechnology/blob/pr8/main.go  
+Ссылка на код: https://github.com/MarBalueva/industrialTechnology/blob/pr9/main.go 
 
 ### 9.1. Получение токена  
 POST http://localhost:8080/login  
