@@ -4,7 +4,7 @@
 
 ## Практика 11
 ## Интеграция REST API с базой данных (PostgreSQL) на Go
-Ссылка на код: https://github.com/MarBalueva/industrialTechnology/blob/pr9/main.go 
+Ссылка на код: https://github.com/MarBalueva/industrialTechnology/blob/pr11/main.go  
 
 ### 11.1. Получение токена  
 POST http://localhost:8080/login  
