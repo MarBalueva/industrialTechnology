@@ -2,34 +2,30 @@
 Практические занятия по предмету "Технологии индустриального программирования" 1 семестр.  
 Автор: Балуева Мария, ЭФМО-02-24  
 
-## Практика 9
-## Аутентификация и авторизация в REST API.  
+## Практика 11
+## Интеграция REST API с базой данных (PostgreSQL) на Go
 Ссылка на код: https://github.com/MarBalueva/industrialTechnology/blob/pr9/main.go 
 
-### 9.1. Получение токена  
+### 11.1. Получение токена  
 POST http://localhost:8080/login  
-![alt text](image-13.png)  
+![alt text](image-20.png)  
 
-### 9.2. Получение продуктов из корзины  
+### 11.2. Получение всех продуктов  
 GET http://localhost:8080/cart  
-![alt text](image-14.png)  
+![alt text](image-21.png)  
 
-### 9.3. Получение продуктов из корзины неавторизованным пользователем  
+### 11.3. Добавление продукта в корзину  
+POST http://localhost:8080/cart  
+![alt text](image-22.png)  
+
+### 11.4. Получение продуктов из корзины  
 GET http://localhost:8080/cart  
-![alt text](image-15.png)  
+![alt text](image-23.png)  
 
-### 9.4. Получение нового токена  
-POST http://localhost:8080/login  
-![alt text](image-16.png)  
+### 11.5. Удаление продукта из корзины  
+DELETE http://localhost:8080/cart/2  
+![alt text](image-24.png)  
 
-### 9.5. Проверка срока действия токена  
+### 11.6. Перезаход и получение продуктов из корзины  
 GET http://localhost:8080/cart  
-![alt text](image-17.png)  
-
-### 9.6. Запрос рефреша токена  
-POST http://localhost:8080/refresh  
-![alt text](image-18.png)  
-
-### 9.7. Проверка нового токена
-GET http://localhost:8080/cart  
-![alt text](image-19.png)  
+![alt text](image-25.png)  
