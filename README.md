@@ -2,37 +2,27 @@
 Практические занятия по предмету "Технологии индустриального программирования" 1 семестр.  
 Автор: Балуева Мария, ЭФМО-02-24  
 
-## Практика 12
-## Обработка ошибок, пагинация и фильтрация данных в REST API
-Ссылка на код: https://github.com/MarBalueva/industrialTechnology/blob/pr12/main.go  
+## Практика 13
+## Асинхронная обработка и задачи в фоновом режиме
+Ссылка на код: https://github.com/MarBalueva/industrialTechnology/blob/pr13/main.go  
 
-### 12.1. Получение токена  
-POST http://localhost:8080/login  
-![alt text](image-26.png)  
+### 13.1. Логирование действий в консоль для каждого этапа выполнения задач  
+POST http://localhost:8080/tasks  
+![alt text](/img/image.png)  
 
-### 12.2. Обработка ошибок в CRUD-функциях
-GET http://localhost:8080/products/10  
-![alt text](image-29.png)  
+### 13.2. Отмена задач  
+POST http://localhost:8080/tasks  
+![alt text](image-1.png)  
 
-PUT http://localhost:8080/products/10  
-![alt text](image-28.png)  
+POST http://localhost:8080/tasks/20241205010619/cancel  
+![alt text](image.png)  
 
-### 12.3. Пагинация данных
-GET http://localhost:8080/products?page=2&limit=2  
-![alt text](image-30.png)  
+### 13.3. Ограничение на количество одновременно выполняющихся задач  
+POST http://localhost:8080/tasks  
+![alt text](image-2.png)  
 
-### 12.4. Фильтрация данных  
-GET http://localhost:8080/products?page=1&limit=2&name=Шоколадный%20маффин  
-![alt text](image-31.png)
+Попытка создать новую задачу  
+![alt text](image-3.png)  
 
-### 12.5. Использование контекста запроса для тайм-аутов  
-GET http://localhost:8080/productswithtimeout  
-![alt text](image-34.png)  
-
-### 12.6. Сортировка данных  
-GET http://localhost:8080/products?page=1&limit=3&sort=name&order=asc  
-![alt text](image-32.png)  
-
-### 12.7. Gопытка обновления несуществующего ресурса  
-PUT http://localhost:8080/products/10  
-![alt text](image-33.png)  
+Сообщение о завершении всех задач  
+![alt text](image-4.png)  

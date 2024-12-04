@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"main/tasks"
 	"net/http"
 	"strconv"
 	"time"
@@ -122,6 +123,34 @@ func main() {
 		// Удаление продукта из корзины
 		protected.DELETE("/cart/:productId", deleteFromCart)
 	}
+
+	// Создание задачи
+	router.POST("/tasks", func(c *gin.Context) {
+		taskID := tasks.CreateTask()
+		log.Printf("Task creation requested: ID=%s", taskID)
+		go tasks.RunTask(taskID)
+		c.JSON(201, gin.H{"task_id": taskID})
+	})
+
+	// Получение статуса задачи
+	router.GET("/tasks/:id", func(c *gin.Context) {
+		taskID := c.Param("id")
+		log.Printf("Task status requested: ID=%s", taskID)
+		task := tasks.GetTask(taskID)
+		if task == nil {
+			c.JSON(404, gin.H{"error": "Task not found"})
+			return
+		}
+		c.JSON(200, task)
+	})
+
+	// Отмена задачи
+	router.POST("/tasks/:id/cancel", func(c *gin.Context) {
+		taskID := c.Param("id")
+		log.Printf("Cancel request received for Task ID: %s", taskID)
+		tasks.CancelTask(taskID)
+		c.JSON(200, gin.H{"message": "Task cancellation requested", "task_id": taskID})
+	})
 
 	router.Run(":8080")
 }
