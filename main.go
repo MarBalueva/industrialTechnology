@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -94,6 +98,9 @@ func main() {
 		// Получение всех продуктов
 		protected.GET("/products", getProducts)
 
+		// Получение всех продуктов с таймаутом
+		protected.GET("productswithtimeout", getProductsWithTimeout)
+
 		// Получение продукта по ID
 		protected.GET("/products/:id", getProductByID)
 
@@ -117,6 +124,10 @@ func main() {
 	}
 
 	router.Run(":8080")
+}
+
+func handleError(c *gin.Context, statusCode int, message string) {
+	c.JSON(statusCode, gin.H{"error": message})
 }
 
 func initDB() {
@@ -151,23 +162,23 @@ func generateToken(username string, userID int64) (string, error) {
 func login(c *gin.Context) {
 	var creds Credentials
 	if err := c.BindJSON(&creds); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid request"})
+		handleError(c, http.StatusBadRequest, "Invalid request")
 		return
 	}
 
 	var user Appuser
 	if err := db.Where("login = ? AND password = ?", creds.Login, creds.Password).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
+			handleError(c, http.StatusUnauthorized, "Unauthorized")
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "database error"})
+			handleError(c, http.StatusInternalServerError, "Database error")
 		}
 		return
 	}
 
 	token, err := generateToken(creds.Login, user.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "could not create token"})
+		handleError(c, http.StatusInternalServerError, "Could not create token")
 		return
 	}
 
@@ -186,18 +197,18 @@ func authMiddleware() gin.HandlerFunc {
 		if err != nil {
 			if ve, ok := err.(*jwt.ValidationError); ok {
 				if ve.Errors&jwt.ValidationErrorExpired != 0 {
-					c.JSON(http.StatusUnauthorized, gin.H{"message": "token expired"})
+					handleError(c, http.StatusUnauthorized, "Token expired")
 					c.Abort()
 					return
 				}
 			}
-			c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
+			handleError(c, http.StatusUnauthorized, "Unauthorized")
 			c.Abort()
 			return
 		}
 
 		if !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
+			handleError(c, http.StatusUnauthorized, "Unauthorized")
 			c.Abort()
 			return
 		}
@@ -220,27 +231,129 @@ func refreshToken(c *gin.Context) {
 			if ve.Errors&jwt.ValidationErrorExpired != 0 {
 				newToken, err := generateToken(claims.Username, claims.UserID)
 				if err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"message": "could not refresh token"})
+					handleError(c, http.StatusInternalServerError, "Could not refresh token")
 					return
 				}
 				c.JSON(http.StatusOK, gin.H{"token": newToken})
 				return
 			}
 		}
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
+		handleError(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
 	if !token.Valid {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
+		handleError(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
-	c.JSON(http.StatusBadRequest, gin.H{"message": "token is still valid"})
+	handleError(c, http.StatusBadRequest, "Token is still valid")
 }
 
 func getProducts(c *gin.Context) {
 	var products []Product
-	db.Find(&products)
+	var total int64
+
+	//пагинация
+	page := c.DefaultQuery("page", "1")
+	limit := c.DefaultQuery("limit", "3")
+
+	//фильтры
+	name := c.Query("name")
+	category := c.Query("category")
+
+	//сортировка
+	sortField := c.DefaultQuery("sort", "id")
+	sortOrder := c.DefaultQuery("order", "asc")
+
+	//допустимые поля для сортировки
+	validSortFields := map[string]bool{
+		"id":       true,
+		"name":     true,
+		"category": true,
+		"cost":     true,
+	}
+
+	//проверка параметров пагинации
+	pageInt, err := strconv.Atoi(page)
+	if err != nil || pageInt < 1 {
+		handleError(c, http.StatusBadRequest, "Invalid page parameter")
+		return
+	}
+
+	limitInt, err2 := strconv.Atoi(limit)
+	if err2 != nil || limitInt < 1 {
+		handleError(c, http.StatusBadRequest, "Invalid limit parameter")
+		return
+	}
+
+	offset := (pageInt - 1) * limitInt
+
+	//проверка корректности поля сортировки
+	if !validSortFields[sortField] {
+		handleError(c, http.StatusBadRequest, "Invalid sort field")
+		return
+	}
+
+	//проверка корректности порядка сортировки
+	if sortOrder != "asc" && sortOrder != "desc" {
+		handleError(c, http.StatusBadRequest, "Invalid sort order")
+		return
+	}
+
+	query := db.Model(&Product{}).Limit(limitInt).Offset(offset)
+
+	//проверка фильтров
+	if name != "" {
+		query = query.Where("name ILIKE ?", "%"+name+"%")
+	}
+	if category != "" {
+		query = query.Where("category ILIKE ?", "%"+category+"%")
+	}
+
+	query = query.Order(fmt.Sprintf("%s %s", sortField, sortOrder))
+
+	if err := query.Count(&total).Error; err != nil {
+		handleError(c, http.StatusInternalServerError, "Failed to count products")
+		return
+	}
+
+	if err := query.Find(&products).Error; err != nil {
+		handleError(c, http.StatusInternalServerError, "Failed to fetch products")
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":  products,
+		"total": total,
+		"page":  pageInt,
+		"limit": limitInt,
+		"sort": gin.H{
+			"field": sortField,
+			"order": sortOrder,
+		},
+		"filters": gin.H{
+			"name":     name,
+			"category": category,
+		},
+	})
+}
+
+func getProductsWithTimeout(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 1*time.Millisecond)
+	defer cancel()
+
+	var products []Product
+	time.Sleep(10 * time.Millisecond)
+
+	if err := db.WithContext(ctx).Find(&products).Error; err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			handleError(c, http.StatusRequestTimeout, "Request timed out")
+		} else {
+			handleError(c, http.StatusInternalServerError, "Failed to fetch products")
+		}
+		return
+	}
+
 	c.JSON(http.StatusOK, products)
 }
 
@@ -248,7 +361,7 @@ func getProductByID(c *gin.Context) {
 	id := c.Param("id")
 	var product Product
 	if err := db.First(&product, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "product not found"})
+		handleError(c, http.StatusNotFound, "Product not found")
 		return
 	}
 	c.JSON(http.StatusOK, product)
@@ -257,7 +370,7 @@ func getProductByID(c *gin.Context) {
 func createProduct(c *gin.Context) {
 	var newProduct Product
 	if err := c.BindJSON(&newProduct); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid request"})
+		handleError(c, http.StatusBadRequest, "Invalid request")
 		return
 	}
 	db.Create(&newProduct)
@@ -266,33 +379,50 @@ func createProduct(c *gin.Context) {
 
 func updateProduct(c *gin.Context) {
 	id := c.Param("id")
-	var updatedProduct Product
-	if err := c.BindJSON(&updatedProduct); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid request"})
+	var product Product
+
+	//поиск продукта
+	if err := db.First(&product, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			handleError(c, http.StatusNotFound, "Product not found")
+			return
+		}
+		handleError(c, http.StatusInternalServerError, "Failed to retrieve product")
 		return
 	}
-	if err := db.Model(&Product{}).Where("id = ?", id).Updates(updatedProduct).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "product not found"})
+
+	//обновление продукта
+	if err := c.ShouldBindJSON(&product); err != nil {
+		handleError(c, http.StatusBadRequest, "Invalid request body")
 		return
 	}
-	c.JSON(http.StatusOK, updatedProduct)
+
+	if err := db.Save(&product).Error; err != nil {
+		handleError(c, http.StatusInternalServerError, "Failed to update product")
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Product updated successfully",
+		"data":    product,
+	})
 }
 
 func deleteProduct(c *gin.Context) {
 	id := c.Param("id")
 
 	if err := db.Delete(&Product{}, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "product not found"})
+		handleError(c, http.StatusNotFound, "Product not found")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "product deleted"})
+	c.JSON(http.StatusOK, gin.H{"message": "Product deleted"})
 }
 
 func getCart(c *gin.Context) {
 	userID := c.GetInt64("userId")
 	var cartItems []ProductInBasket
 	if err := db.Where("userid = ?", userID).Find(&cartItems).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to fetch cart"})
+		handleError(c, http.StatusInternalServerError, "Failed to fetch cart")
 		return
 	}
 
@@ -303,7 +433,7 @@ func addToCart(c *gin.Context) {
 	var newItem ProductInBasket
 
 	if err := c.BindJSON(&newItem); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid request"})
+		handleError(c, http.StatusBadRequest, "Invalid request")
 		return
 	}
 
@@ -313,7 +443,7 @@ func addToCart(c *gin.Context) {
 	if result.RowsAffected > 0 {
 		existingItem.Count += newItem.Count
 		if err := db.Save(&existingItem).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to update cart item"})
+			handleError(c, http.StatusInternalServerError, "Failed to update cart item")
 			return
 		}
 		c.JSON(http.StatusOK, existingItem)
@@ -321,7 +451,7 @@ func addToCart(c *gin.Context) {
 	}
 
 	if err := db.Create(&newItem).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to add item to cart"})
+		handleError(c, http.StatusInternalServerError, "Failed to add item to cart")
 		return
 	}
 
@@ -335,17 +465,17 @@ func deleteFromCart(c *gin.Context) {
 	var item ProductInBasket
 	if err := db.Where("productid = ? AND userid = ?", productID, userID).First(&item).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"message": "product not found in cart"})
+			handleError(c, http.StatusNotFound, "Product not found in cart")
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to fetch cart item"})
+			handleError(c, http.StatusInternalServerError, "Failed to fetch cart item")
 		}
 		return
 	}
 
 	if err := db.Delete(&item).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to remove product from cart"})
+		handleError(c, http.StatusInternalServerError, "Failed to remove product from cart")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "product removed from cart"})
+	c.JSON(http.StatusOK, gin.H{"message": "Product removed from cart"})
 }

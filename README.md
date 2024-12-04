@@ -2,30 +2,37 @@
 Практические занятия по предмету "Технологии индустриального программирования" 1 семестр.  
 Автор: Балуева Мария, ЭФМО-02-24  
 
-## Практика 11
-## Интеграция REST API с базой данных (PostgreSQL) на Go
+## Практика 12
+## Обработка ошибок, пагинация и фильтрация данных в REST API
 Ссылка на код: https://github.com/MarBalueva/industrialTechnology/blob/pr11/main.go  
 
-### 11.1. Получение токена  
+### 12.1. Получение токена  
 POST http://localhost:8080/login  
-![alt text](image-20.png)  
+![alt text](image-26.png)  
 
-### 11.2. Получение всех продуктов  
-GET http://localhost:8080/cart  
-![alt text](image-21.png)  
+### 12.2. Обработка ошибок в CRUD-функциях
+GET http://localhost:8080/products/10  
+![alt text](image-29.png)  
 
-### 11.3. Добавление продукта в корзину  
-POST http://localhost:8080/cart  
-![alt text](image-22.png)  
+PUT http://localhost:8080/products/10  
+![alt text](image-28.png)  
 
-### 11.4. Получение продуктов из корзины  
-GET http://localhost:8080/cart  
-![alt text](image-23.png)  
+### 12.3. Пагинация данных
+GET http://localhost:8080/products?page=2&limit=2  
+![alt text](image-30.png)  
 
-### 11.5. Удаление продукта из корзины  
-DELETE http://localhost:8080/cart/2  
-![alt text](image-24.png)  
+### 12.4. Фильтрация данных  
+GET http://localhost:8080/products?page=1&limit=2&name=Шоколадный%20маффин  
+![alt text](image-31.png)
 
-### 11.6. Перезаход и получение продуктов из корзины  
-GET http://localhost:8080/cart  
-![alt text](image-25.png)  
+### 12.5. Использование контекста запроса для тайм-аутов  
+GET http://localhost:8080/productswithtimeout  
+![alt text](image-34.png)  
+
+### 12.6. Сортировка данных  
+GET http://localhost:8080/products?page=1&limit=3&sort=name&order=asc  
+![alt text](image-32.png)  
+
+### 12.7. Gопытка обновления несуществующего ресурса  
+PUT http://localhost:8080/products/10  
+![alt text](image-33.png)  
