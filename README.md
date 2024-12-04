@@ -4,7 +4,7 @@
 
 ## Практика 12
 ## Обработка ошибок, пагинация и фильтрация данных в REST API
-Ссылка на код: https://github.com/MarBalueva/industrialTechnology/blob/pr11/main.go  
+Ссылка на код: https://github.com/MarBalueva/industrialTechnology/blob/pr12/main.go  
 
 ### 12.1. Получение токена  
 POST http://localhost:8080/login  
