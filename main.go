@@ -91,12 +91,6 @@ var db *gorm.DB
 // @title Bakery API
 // @version 1.0
 // @description Это API для управления продуктами и корзиной в онлайн-магазине кондитерских изделий
-// @termsOfService http://example.com/terms/
-// @contact.name API Support
-// @contact.url http://example.com/support
-// @contact.email support@example.com
-// @license.name MIT
-// @license.url http://opensource.org/licenses/MIT
 // @host localhost:8080
 // @BasePath /
 // @securityDefinitions.apikey TokenAuth
