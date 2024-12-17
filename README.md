@@ -5,6 +5,7 @@
 ## Практика 14
 ## Сборка документации проекта с помощью swagger
 Ссылка на код: https://github.com/MarBalueva/industrialTechnology/blob/pr14/main.go  
+http://localhost:8080/swagger/index.html  
 
 ### 14.1. Swagger UI  
 ![alt text](image-5.png)  
