@@ -1,0 +1,454 @@
+basePath: /
+definitions:
+  main.Credentials:
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+    type: object
+  main.Product:
+    properties:
+      calories:
+        type: number
+      carbohydrates:
+        type: number
+      categoryId:
+        type: integer
+      cost:
+        type: number
+      countTypePack:
+        type: integer
+      description:
+        type: string
+      fats:
+        type: number
+      id:
+        type: integer
+      inStore:
+        type: boolean
+      name:
+        type: string
+      okeiId:
+        type: integer
+      packaged:
+        type: integer
+      photoLink:
+        type: string
+      proteins:
+        type: number
+      unWeight:
+        type: number
+      weight:
+        type: integer
+    type: object
+  main.ProductInBasket:
+    properties:
+      count:
+        type: integer
+      productId:
+        type: integer
+      userId:
+        type: integer
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@example.com
+    name: API Support
+    url: http://example.com/support
+  description: Это API для управления продуктами и корзиной в онлайн-магазине кондитерских
+    изделий
+  license:
+    name: MIT
+    url: http://opensource.org/licenses/MIT
+  termsOfService: http://example.com/terms/
+  title: Bakery API
+  version: "1.0"
+paths:
+  /cart:
+    get:
+      description: Получить все товары в корзине текущего пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список товаров в корзине
+          schema:
+            items:
+              $ref: '#/definitions/main.ProductInBasket'
+            type: array
+        "500":
+          description: Ошибка сервера
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TokenAuth: []
+      summary: Получить корзину пользователя
+      tags:
+      - cart
+    post:
+      consumes:
+      - application/json
+      description: Добавить товар по ID и количеству в корзину пользователя
+      parameters:
+      - description: Информация о товаре для добавления
+        in: body
+        name: item
+        required: true
+        schema:
+          $ref: '#/definitions/main.ProductInBasket'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Товар добавлен в корзину
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Неверный запрос
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TokenAuth: []
+      summary: Добавить товар в корзину
+      tags:
+      - cart
+  /cart/{productId}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет продукт из корзины пользователя по его ID
+      parameters:
+      - description: ID продукта
+        in: path
+        name: productId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Продукт успешно удален из корзины
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Продукт не найден в корзине
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка удаления из корзины
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TokenAuth: []
+      summary: Удалить продукт из корзины
+      tags:
+      - cart
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Авторизация пользователя по логину и паролю
+      parameters:
+      - description: Данные для входа
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/main.Credentials'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Токен авторизации
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Неверный запрос
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Неавторизован
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TokenAuth: []
+      summary: Авторизация пользователя
+      tags:
+      - auth
+  /products:
+    get:
+      consumes:
+      - application/json
+      description: Получить список продуктов с пагинацией, фильтрацией и сортировкой
+      parameters:
+      - description: Номер страницы
+        in: query
+        name: page
+        type: integer
+      - description: Кол-во элементов на странице
+        in: query
+        name: limit
+        type: integer
+      - description: Фильтр по имени
+        in: query
+        name: name
+        type: string
+      - description: Фильтр по категории
+        in: query
+        name: category
+        type: string
+      - description: Поле для сортировки
+        in: query
+        name: sort
+        type: string
+      - description: Порядок сортировки (asc/desc)
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список продуктов
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Ошибка сервера
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TokenAuth: []
+      summary: Получить список продуктов
+      tags:
+      - products
+    post:
+      consumes:
+      - application/json
+      description: Добавить новый продукт в базу данных
+      parameters:
+      - description: Данные нового продукта
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/main.Product'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Созданный продукт
+          schema:
+            $ref: '#/definitions/main.Product'
+        "400":
+          description: Неверный запрос
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TokenAuth: []
+      summary: Создать новый продукт
+      tags:
+      - products
+  /products/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет продукт по его уникальному идентификатору
+      parameters:
+      - description: ID продукта
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Продукт успешно удален
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Продукт не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TokenAuth: []
+      summary: Удалить продукт
+      tags:
+      - products
+    get:
+      consumes:
+      - application/json
+      description: Возвращает продукт по его уникальному идентификатору
+      parameters:
+      - description: ID продукта
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Продукт найден
+          schema:
+            $ref: '#/definitions/main.Product'
+        "404":
+          description: Продукт не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TokenAuth: []
+      summary: Получить продукт по ID
+      tags:
+      - products
+    put:
+      consumes:
+      - application/json
+      description: Обновляет информацию о продукте по его ID
+      parameters:
+      - description: ID продукта
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные для обновления продукта
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/main.Product'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Продукт успешно обновлен
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Некорректное тело запроса
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Продукт не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка обновления продукта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - TokenAuth: []
+      summary: Обновить продукт
+      tags:
+      - products
+  /refresh:
+    post:
+      consumes:
+      - application/json
+      description: Обновляет JWT-токен, если он истек. Возвращает новый токен.
+      parameters:
+      - description: JWT токен, который нужно обновить
+        example: '"<токен>"'
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Новый токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Токен еще не истек
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Неавторизованный запрос или некорректный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка при генерации нового токена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Refresh expired token
+      tags:
+      - auth
+securityDefinitions:
+  TokenAuth:
+    description: Введите ваш токен напрямую в заголовке Authorization
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -14,6 +14,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	_ "main/docs"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Product struct {
@@ -83,6 +88,21 @@ var router = gin.Default()
 
 var db *gorm.DB
 
+// @title Bakery API
+// @version 1.0
+// @description Это API для управления продуктами и корзиной в онлайн-магазине кондитерских изделий
+// @termsOfService http://example.com/terms/
+// @contact.name API Support
+// @contact.url http://example.com/support
+// @contact.email support@example.com
+// @license.name MIT
+// @license.url http://opensource.org/licenses/MIT
+// @host localhost:8080
+// @BasePath /
+// @securityDefinitions.apikey TokenAuth
+// @in header
+// @name Authorization
+// @description Введите ваш токен напрямую в заголовке Authorization
 func main() {
 	//Инициализация БД
 	initDB()
@@ -92,6 +112,8 @@ func main() {
 
 	// Рефреш токена
 	router.POST("/refresh", refreshToken)
+
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	protected := router.Group("/")
 	protected.Use(authMiddleware())
@@ -188,6 +210,17 @@ func generateToken(username string, userID int64) (string, error) {
 	return token.SignedString(jwtKey)
 }
 
+// @Summary Авторизация пользователя
+// @Description Авторизация пользователя по логину и паролю
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security TokenAuth
+// @Param credentials body Credentials true "Данные для входа"
+// @Success 200 {object} map[string]string "Токен авторизации"
+// @Failure 400 {object} map[string]string "Неверный запрос"
+// @Failure 401 {object} map[string]string "Неавторизован"
+// @Router /login [post]
 func login(c *gin.Context) {
 	var creds Credentials
 	if err := c.BindJSON(&creds); err != nil {
@@ -247,6 +280,17 @@ func authMiddleware() gin.HandlerFunc {
 	}
 }
 
+// @Summary Refresh expired token
+// @Description Обновляет JWT-токен, если он истек. Возвращает новый токен.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "JWT токен, который нужно обновить" example("<токен>")
+// @Success 200 {object} map[string]string "Новый токен"
+// @Failure 400 {object} map[string]string "Токен еще не истек"
+// @Failure 401 {object} map[string]string "Неавторизованный запрос или некорректный токен"
+// @Failure 500 {object} map[string]string "Ошибка при генерации нового токена"
+// @Router /refresh [post]
 func refreshToken(c *gin.Context) {
 	tokenString := c.GetHeader("Authorization")
 
@@ -278,6 +322,21 @@ func refreshToken(c *gin.Context) {
 	handleError(c, http.StatusBadRequest, "Token is still valid")
 }
 
+// @Summary Получить список продуктов
+// @Description Получить список продуктов с пагинацией, фильтрацией и сортировкой
+// @Tags products
+// @Accept json
+// @Produce json
+// @Security TokenAuth
+// @Param page query int false "Номер страницы"
+// @Param limit query int false "Кол-во элементов на странице"
+// @Param name query string false "Фильтр по имени"
+// @Param category query string false "Фильтр по категории"
+// @Param sort query string false "Поле для сортировки"
+// @Param order query string false "Порядок сортировки (asc/desc)"
+// @Success 200 {object} map[string]interface{} "Список продуктов"
+// @Failure 500 {object} map[string]string "Ошибка сервера"
+// @Router /products [get]
 func getProducts(c *gin.Context) {
 	var products []Product
 	var total int64
@@ -386,6 +445,17 @@ func getProductsWithTimeout(c *gin.Context) {
 	c.JSON(http.StatusOK, products)
 }
 
+// @Summary Получить продукт по ID
+// @Description Возвращает продукт по его уникальному идентификатору
+// @Tags products
+// @Accept json
+// @Produce json
+// @Security TokenAuth
+// @Param id path int true "ID продукта"
+// @Success 200 {object} Product "Продукт найден"
+// @Failure 404 {object} map[string]string "Продукт не найден"
+// @Failure 500 {object} map[string]string "Ошибка сервера"
+// @Router /products/{id} [get]
 func getProductByID(c *gin.Context) {
 	id := c.Param("id")
 	var product Product
@@ -396,6 +466,17 @@ func getProductByID(c *gin.Context) {
 	c.JSON(http.StatusOK, product)
 }
 
+// @Summary Создать новый продукт
+// @Description Добавить новый продукт в базу данных
+// @Tags products
+// @Accept json
+// @Produce json
+// @Security TokenAuth
+// @Param product body Product true "Данные нового продукта"
+// @Success 201 {object} Product "Созданный продукт"
+// @Failure 400 {object} map[string]string "Неверный запрос"
+// @Failure 500 {object} map[string]string "Ошибка сервера"
+// @Router /products [post]
 func createProduct(c *gin.Context) {
 	var newProduct Product
 	if err := c.BindJSON(&newProduct); err != nil {
@@ -406,6 +487,19 @@ func createProduct(c *gin.Context) {
 	c.JSON(http.StatusCreated, newProduct)
 }
 
+// @Summary Обновить продукт
+// @Description Обновляет информацию о продукте по его ID
+// @Tags products
+// @Accept json
+// @Produce json
+// @Security TokenAuth
+// @Param id path int true "ID продукта"
+// @Param product body Product true "Данные для обновления продукта"
+// @Success 200 {object} map[string]interface{} "Продукт успешно обновлен"
+// @Failure 400 {object} map[string]string "Некорректное тело запроса"
+// @Failure 404 {object} map[string]string "Продукт не найден"
+// @Failure 500 {object} map[string]string "Ошибка обновления продукта"
+// @Router /products/{id} [put]
 func updateProduct(c *gin.Context) {
 	id := c.Param("id")
 	var product Product
@@ -437,6 +531,17 @@ func updateProduct(c *gin.Context) {
 	})
 }
 
+// @Summary Удалить продукт
+// @Description Удаляет продукт по его уникальному идентификатору
+// @Tags products
+// @Accept json
+// @Produce json
+// @Security TokenAuth
+// @Param id path int true "ID продукта"
+// @Success 200 {object} map[string]string "Продукт успешно удален"
+// @Failure 404 {object} map[string]string "Продукт не найден"
+// @Failure 500 {object} map[string]string "Ошибка сервера"
+// @Router /products/{id} [delete]
 func deleteProduct(c *gin.Context) {
 	id := c.Param("id")
 
@@ -447,6 +552,14 @@ func deleteProduct(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Product deleted"})
 }
 
+// @Summary Получить корзину пользователя
+// @Description Получить все товары в корзине текущего пользователя
+// @Tags cart
+// @Produce json
+// @Security TokenAuth
+// @Success 200 {array} ProductInBasket "Список товаров в корзине"
+// @Failure 500 {object} map[string]string "Ошибка сервера"
+// @Router /cart [get]
 func getCart(c *gin.Context) {
 	userID := c.GetInt64("userId")
 	var cartItems []ProductInBasket
@@ -458,6 +571,17 @@ func getCart(c *gin.Context) {
 	c.JSON(http.StatusOK, cartItems)
 }
 
+// @Summary Добавить товар в корзину
+// @Description Добавить товар по ID и количеству в корзину пользователя
+// @Tags cart
+// @Accept json
+// @Produce json
+// @Security TokenAuth
+// @Param item body ProductInBasket true "Информация о товаре для добавления"
+// @Success 201 {object} map[string]string "Товар добавлен в корзину"
+// @Failure 400 {object} map[string]string "Неверный запрос"
+// @Failure 500 {object} map[string]string "Ошибка сервера"
+// @Router /cart [post]
 func addToCart(c *gin.Context) {
 	var newItem ProductInBasket
 
@@ -487,6 +611,17 @@ func addToCart(c *gin.Context) {
 	c.JSON(http.StatusCreated, newItem)
 }
 
+// @Summary Удалить продукт из корзины
+// @Description Удаляет продукт из корзины пользователя по его ID
+// @Tags cart
+// @Accept json
+// @Produce json
+// @Security TokenAuth
+// @Param productId path int true "ID продукта"
+// @Success 200 {object} map[string]string "Продукт успешно удален из корзины"
+// @Failure 404 {object} map[string]string "Продукт не найден в корзине"
+// @Failure 500 {object} map[string]string "Ошибка удаления из корзины"
+// @Router /cart/{productId} [delete]
 func deleteFromCart(c *gin.Context) {
 	productID := c.Param("productId")
 	userID := c.GetInt64("userId")
