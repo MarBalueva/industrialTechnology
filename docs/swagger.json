@@ -3,16 +3,7 @@
     "info": {
         "description": "Это API для управления продуктами и корзиной в онлайн-магазине кондитерских изделий",
         "title": "Bakery API",
-        "termsOfService": "http://example.com/terms/",
-        "contact": {
-            "name": "API Support",
-            "url": "http://example.com/support",
-            "email": "support@example.com"
-        },
-        "license": {
-            "name": "MIT",
-            "url": "http://opensource.org/licenses/MIT"
-        },
+        "contact": {},
         "version": "1.0"
     },
     "host": "localhost:8080",

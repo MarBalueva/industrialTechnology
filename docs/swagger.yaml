@@ -53,16 +53,9 @@ definitions:
     type: object
 host: localhost:8080
 info:
-  contact:
-    email: support@example.com
-    name: API Support
-    url: http://example.com/support
+  contact: {}
   description: Это API для управления продуктами и корзиной в онлайн-магазине кондитерских
     изделий
-  license:
-    name: MIT
-    url: http://opensource.org/licenses/MIT
-  termsOfService: http://example.com/terms/
   title: Bakery API
   version: "1.0"
 paths:

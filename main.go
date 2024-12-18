@@ -176,7 +176,9 @@ func handleError(c *gin.Context, statusCode int, message string) {
 }
 
 func initDB() {
-	dsn := "host=localhost user=postgres password=1 dbname=bakery port=5000 sslmode=disable search_path=bakery"
+	dsn := "host=db user=postgres password=1 dbname=bakery port=5432 sslmode=disable search_path=bakery"
+	//dsn := "host=localhost user=postgres password=1 dbname=bakery port=5000 sslmode=disable search_path=bakery"
+	time.Sleep(10 * time.Second)
 	var err error
 	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -184,6 +186,9 @@ func initDB() {
 	} else {
 		log.Println("Database connected successfully")
 	}
+
+	//для докера
+	//db.Exec("SET search_path TO bakery")
 
 	db.AutoMigrate(&Product{})
 	db.AutoMigrate(&Appuser{})
